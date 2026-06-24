@@ -39,6 +39,12 @@
     opacity:0; transition:opacity .6s ease;
   }
   .palco .media.ativo{ opacity:1; }
+  .aviso-media{
+    display:none; position:absolute; inset:0; z-index:5;
+    flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:8%; background:var(--fundo); color:var(--tinta);
+    font-size:clamp(0.9rem,2.2vmin,1.4rem); line-height:1.5;
+  }
 
   /* --- Lado direito: senha (inalterado) --- */
   .lado-senha{
@@ -90,6 +96,7 @@
   <div class="ecra">
     <section class="lado-media">
       <div class="palco" id="palco"></div>
+      <div class="aviso-media" id="aviso-media"></div>
     </section>
     <section class="lado-senha">
       <div class="rotulo">Senha Atual</div>
@@ -107,13 +114,13 @@
   /* ============================================================
      MEDIA A RODAR NO LADO ESQUERDO
      Lista aqui os teus ficheiros (imagens e/ou vídeos), pela ordem
-     em que queres que apareçam. Coloca-os numa pasta "media" ao lado
-     deste ficheiro. Aceita .jpg .png .webp e vídeos .mp4 .webm
+     em que queres que apareçam. Coloca-os na MESMA pasta deste
+     ficheiro. Aceita .jpg .png .webp e vídeos .mp4 .webm
      ============================================================ */
   const MEDIA = [
-    "media/bolas.jpg",
-    "media/massamae.png",
-    "media/milhochourico.png",
+    "bolas.jpg",
+    "massamae.png",
+    "milhochourico.png",
   ];
   const SEGUNDOS_IMAGEM = 8;   // tempo de cada imagem no ecrã
   /* ============================================================ */
@@ -127,7 +134,7 @@
     return EXT_VIDEO.includes(ext);
   }
 
-  let idx = -1, timer = null, atual = null;
+  let idx = -1, timer = null, atual = null, falhas = 0;
 
   function proximo(){
     if(MEDIA.length === 0) return;
@@ -135,7 +142,27 @@
     mostrarMedia(MEDIA[idx]);
   }
 
-  function saltar(){ if(MEDIA.length > 1) proximo(); }
+  function sucesso(){ falhas = 0; document.getElementById("aviso-media").style.display = "none"; }
+
+  function saltar(){
+    falhas++;
+    if(falhas >= MEDIA.length){ mostrarErro(); return; }  // todas falharam: para de tentar
+    proximo();
+  }
+
+  function mostrarErro(){
+    clearTimeout(timer);
+    const aviso = document.getElementById("aviso-media");
+    const local = location.protocol === "file:";
+    aviso.innerHTML =
+      "N\u00e3o consegui carregar as imagens." +
+      (local
+        ? "<br><br>Est\u00e1s a abrir o ficheiro diretamente no aparelho (<b>file://</b>). " +
+          "Muitos browsers Android bloqueiam imagens locais assim.<br>" +
+          "Abre a p\u00e1gina por um endere\u00e7o <b>http(s)</b> (alojada online) para funcionar."
+        : "<br><br>Confirma que os ficheiros est\u00e3o na mesma pasta do index.html e que os nomes batem certo.");
+    aviso.style.display = "flex";
+  }
 
   function mostrarMedia(src){
     clearTimeout(timer);
@@ -146,6 +173,7 @@
       el.setAttribute("playsinline",""); el.playsInline = true;
       el.loop = (MEDIA.length === 1);
       el.className = "media";
+      el.addEventListener("loadeddata", sucesso);
       if(!el.loop) el.addEventListener("ended", proximo);
       el.addEventListener("error", saltar);
       palco.appendChild(el);
@@ -153,6 +181,7 @@
     } else {
       el = document.createElement("img");
       el.src = src; el.className = "media";
+      el.addEventListener("load", sucesso);
       el.addEventListener("error", saltar);
       palco.appendChild(el);
       timer = setTimeout(proximo, SEGUNDOS_IMAGEM * 1000);
