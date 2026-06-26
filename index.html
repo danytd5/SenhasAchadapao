@@ -310,108 +310,8 @@
   function mostrar(){ elNumero.textContent = String(senha).padStart(2, "0"); }
   function avivar(){ elNumero.classList.remove("flare"); void elNumero.offsetWidth; elNumero.classList.add("flare"); }
 
-  /* ---- Áudio: Web Audio API + TTS fallback ---- */
-
-  /* Contexto de áudio (criado uma vez, após interação do utilizador) */
-  let _audioCtx = null;
-  function getAudioCtx(){
-    if(!_audioCtx){
-      try{
-        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }catch(e){}
-    }
-    /* Resume se suspenso (política autoplay) */
-    if(_audioCtx && _audioCtx.state === "suspended"){
-      try{ _audioCtx.resume(); }catch(e){}
-    }
-    return _audioCtx;
-  }
-
-  /* Gera um bipe simples via Web Audio */
-  function bipe(freq, durSeg, delaySeg, volume){
-    const ctx = getAudioCtx();
-    if(!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    const t0 = ctx.currentTime + (delaySeg || 0);
-    gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(volume || 0.5, t0 + 0.01);
-    gain.gain.setValueAtTime(volume || 0.5, t0 + durSeg - 0.02);
-    gain.gain.linearRampToValueAtTime(0, t0 + durSeg);
-    osc.start(t0);
-    osc.stop(t0 + durSeg);
-  }
-
-  /* Toca sequência melódica: dó-mi-sol = "novo número" */
-  function tocarMelodia(){
-    bipe(523, 0.12, 0.00, 0.45);   // dó5
-    bipe(659, 0.12, 0.14, 0.45);   // mi5
-    bipe(784, 0.20, 0.28, 0.55);   // sol5
-  }
-
-  /* Mapa DTMF-like para dígitos: dois tons sobrepostos (como telefone) */
-  const DTMF = {
-    0: [941,1336], 1:[697,1209], 2:[697,1336], 3:[697,1477],
-    4: [770,1209], 5:[770,1336], 6:[770,1477],
-    7: [852,1209], 8:[852,1336], 9:[852,1477]
-  };
-
-  /* Toca os dígitos do número em sequência (DTMF) */
-  function tocarDigitos(n, offsetSeg){
-    const digitos = String(n).split("");
-    let t = offsetSeg || 0;
-    digitos.forEach(d => {
-      const f = DTMF[parseInt(d)];
-      if(f){
-        bipe(f[0], 0.15, t, 0.35);
-        bipe(f[1], 0.15, t, 0.35);
-      }
-      t += 0.22;
-    });
-  }
-
-  /* Síntese completa: melodia + dígitos via Web Audio */
-  function anunciarWebAudio(n){
-    try{
-      getAudioCtx(); // garante contexto ativo
-      tocarMelodia();
-      /* pausa de 0.6s depois da melodia, depois os dígitos */
-      tocarDigitos(n, 0.65);
-    }catch(e){}
-  }
-
-  /* TTS nativo como alternativa se disponível */
-  let VOZES = [];
-  function carregarVozes(){ try{ VOZES = window.speechSynthesis.getVoices() || []; }catch(e){} }
-  if("speechSynthesis" in window){
-    carregarVozes();
-    try{ window.speechSynthesis.onvoiceschanged = carregarVozes; }catch(e){}
-  }
-  function falarSenha(n){
-    try{
-      if(!("speechSynthesis" in window)) return false;
-      /* Verifica se há vozes disponíveis (algumas plataformas não têm) */
-      if(!VOZES || VOZES.length === 0) return false;
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance("Senha " + n);
-      u.lang = "pt-PT"; u.rate = 0.92; u.pitch = 1; u.volume = 1;
-      /* Tenta pt-PT, depois qualquer pt, senão usa o que houver */
-      const vp = VOZES.find(v => /pt[-_]?PT/i.test(v.lang))
-               || VOZES.find(v => /^pt/i.test(v.lang))
-               || null;   /* null = voz padrão do sistema */
-      if(vp) u.voice = vp;
-      window.speechSynthesis.speak(u);
-      return true;
-    }catch(e){ return false; }
-  }
-
-  /* Anunciar: toca ding.mp3, depois TTS; se TTS falhar usa Web Audio */
+  /* ---- Áudio: só o ding.mp3 ---- */
   function anunciar(n){
-    /* 1. Toca o ding.mp3 */
     if(ding){
       try{
         ding.currentTime = 0;
@@ -419,15 +319,6 @@
         if(p && p.catch) p.catch(()=>{});
       }catch(e){}
     }
-
-    /* 2. Após o ding (~1.2s), tenta TTS; se não funcionar usa Web Audio */
-    setTimeout(() => {
-      const ttsOk = falarSenha(n);
-      if(!ttsOk){
-        /* Fallback: melodia + tons DTMF dos dígitos */
-        anunciarWebAudio(n);
-      }
-    }, 1200);
   }
 
   function avancar(){
@@ -508,7 +399,7 @@
      RODAPÉ — escreve aqui a mensagem que vai passar.
      Para várias frases, separa com "   •   ".
      ============================================================ */
-  const MENSAGEM_RODAPE = "Bem-vindos à Achadapão   •   Pão Saloio cozido em forno a lenha desde 1970   •   Obrigado pela vossa visita";
+  const MENSAGEM_RODAPE = "Bem-vindos à Achadapão!   🥖 O verdadeiro pão saloio cozido em forno a lenha desde 1970   🍰 Aproveite para provar os nossos bolos fresquinhos   👀 Fique atento ao seu número   ❤️ Obrigado pela sua visita e volte sempre!";
 
   function iniciarRodape(){
     const track = document.getElementById("rodapeTrack");
