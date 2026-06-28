@@ -34,7 +34,14 @@
   .ecra{ display:flex; flex-direction:row; align-items:stretch; width:100vw; flex:1 1 auto; min-height:0; }
 
   /* --- Lado esquerdo: carrossel de media --- */
-  .lado-media{ flex:1 1 44%; position:relative; overflow:hidden; background:var(--fundo); }
+  .lado-media{
+    flex:1 1 44%; position:relative; overflow:hidden;
+    background-color:var(--fundo);
+    background-image:url("padaria.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+  }
   .palco{ position:absolute; inset:0; }
   .palco .media{
     position:absolute; inset:0; width:100%; height:100%;
