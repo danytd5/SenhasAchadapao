@@ -102,20 +102,13 @@
   }
   .rodape-track{
     display:inline-flex; white-space:nowrap; will-change:transform;
-    animation:rolar 28s linear infinite;
   }
   .rodape-track span{
     font-family:"Oswald",system-ui,sans-serif; font-weight:500;
     font-size:clamp(1rem, 3.4vmin, 2.2rem); letter-spacing:0.04em;
     padding:0 3vw; text-transform:uppercase;
   }
-  @keyframes rolar{
-    from{ transform:translateX(0); }
-    to{ transform:translateX(-50%); }
-  }
-  @media (prefers-reduced-motion: reduce){
-    .rodape-track{ animation:none; }
-  }
+
 
   .debug{
     display:none; position:fixed; bottom:1rem; left:50%; transform:translateX(-50%);
@@ -330,12 +323,24 @@
   function reiniciar(){ senha = 0; mostrar(); avivar(); }
 
   function ehOK(e){ return e.key==="Enter"||e.key==="Select"||e.keyCode===13||e.keyCode===23; }
-  function ehAvancar(e){ return ehOK(e)||e.key===" "||e.key==="Spacebar"||e.key==="PageDown"; }
-  function ehRecuar(e){ return e.key==="ArrowLeft"||e.key==="PageUp"; }
+  function ehAvancar(e){
+    return ehOK(e)
+      || e.key===" "||e.key==="Spacebar"
+      || e.key==="PageDown"
+      || e.key==="ArrowUp"||e.key==="ArrowRight"
+      || e.key==="AudioVolumeUp"||e.key==="VolumeUp"||e.keyCode===175
+      || e.key==="F5"||e.key==="F8";
+  }
+  function ehRecuar(e){ return e.key==="ArrowLeft"||e.key==="ArrowDown"||e.key==="PageUp"; }
   function ehReiniciar(e){ return e.key==="r"||e.key==="R"; }
+  function ehDebugToggle(e){ return e.key==="d"||e.key==="D"; }
 
   document.addEventListener("keydown", (e) => {
-    if(DEBUG){ elDebug.textContent = 'key="'+e.key+'"   code="'+e.code+'"   keyCode='+e.keyCode; }
+    if(ehDebugToggle(e)){ DEBUG = !DEBUG; elDebug.style.display = DEBUG ? "block" : "none"; return; }
+    if(DEBUG){
+      elDebug.textContent = '🔑 key="'+e.key+'"   code="'+e.code+'"   keyCode='+e.keyCode
+        +'\n\nSe este é o teu botão bluetooth,\ndiz ao técnico qual é o "key" mostrado.';
+    }
     if(e.repeat) return;
     if(ehAvancar(e)){ e.preventDefault(); avancar(); }
     else if(ehRecuar(e)){ e.preventDefault(); recuar(); }
@@ -405,12 +410,23 @@
     const track = document.getElementById("rodapeTrack");
     if(!track) return;
     track.innerHTML = "";
-    // duas cópias da mensagem para o ciclo ser contínuo (sem cortes)
-    for(let i=0;i<2;i++){
+    for(let i=0;i<4;i++){
       const s = document.createElement("span");
       s.textContent = MENSAGEM_RODAPE;
       track.appendChild(s);
     }
+    /* Scroll JS puro — não é afetado por prefers-reduced-motion do Chromecast/Google TV */
+    let pos = 0;
+    const PX_POR_FRAME = 1.5; /* velocidade: aumentar para mais rápido */
+    function rolar(){
+      pos += PX_POR_FRAME;
+      /* Quando avançou metade da largura total, volta ao início sem salto */
+      const metade = track.scrollWidth / 2;
+      if(pos >= metade) pos = 0;
+      track.style.transform = "translateX(-" + pos + "px)";
+      requestAnimationFrame(rolar);
+    }
+    requestAnimationFrame(rolar);
   }
   iniciarRodape();
 
