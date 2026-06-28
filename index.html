@@ -155,6 +155,7 @@
   <div class="debug" id="debug"></div>
 
   <audio id="ding" src="ding.mp3" preload="auto"></audio>
+  <audio id="fila" src="fila.mp3" preload="auto"></audio>
 
 <script>
   /* ============================================================
@@ -303,12 +304,24 @@
   function mostrar(){ elNumero.textContent = String(senha).padStart(2, "0"); }
   function avivar(){ elNumero.classList.remove("flare"); void elNumero.offsetWidth; elNumero.classList.add("flare"); }
 
-  /* ---- Áudio: só o ding.mp3 ---- */
+  /* ---- Áudio: ding.mp3 + fila.mp3 ---- */
+  const filaAudio = document.getElementById("fila");
   function anunciar(n){
     if(ding){
       try{
         ding.currentTime = 0;
         const p = ding.play();
+        /* Depois do ding terminar, toca "freguês que se segue" */
+        ding.addEventListener("ended", function tocarFila(){
+          ding.removeEventListener("ended", tocarFila);
+          if(filaAudio){
+            try{
+              filaAudio.currentTime = 0;
+              const pf = filaAudio.play();
+              if(pf && pf.catch) pf.catch(()=>{});
+            }catch(e){}
+          }
+        }, { once: true });
         if(p && p.catch) p.catch(()=>{});
       }catch(e){}
     }
