@@ -341,7 +341,8 @@
   function reiniciar(){ senha = 0; mostrar(); avivar(); }
 
   function ehOK(e){ return e.key==="Enter"||e.key==="Select"||e.keyCode===13||e.keyCode===23; }
-  function ehAvancar(e){ return ehOK(e)||e.key===" "||e.key==="Spacebar"||e.key==="PageDown"; }
+  function ehVolumeCima(e){ return e.key==="AudioVolumeUp"||e.key==="VolumeUp"||e.keyCode===175||e.keyCode===24; }
+  function ehAvancar(e){ return ehOK(e)||ehVolumeCima(e)||e.key===" "||e.key==="Spacebar"||e.key==="PageDown"; }
   function ehRecuar(e){ return e.key==="ArrowLeft"||e.key==="PageUp"; }
   function ehReiniciar(e){ return e.key==="r"||e.key==="R"; }
 
