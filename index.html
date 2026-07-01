@@ -34,14 +34,7 @@
   .ecra{ display:flex; flex-direction:row; align-items:stretch; width:100vw; flex:1 1 auto; min-height:0; }
 
   /* --- Lado esquerdo: carrossel de media --- */
-  .lado-media{
-    flex:1 1 44%; position:relative; overflow:hidden;
-    background-color:var(--fundo);
-    background-image:url("padaria.png");
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
-  }
+  .lado-media{ flex:1 1 44%; position:relative; overflow:hidden; background:var(--fundo); }
   .palco{ position:absolute; inset:0; }
   .palco .media{
     position:absolute; inset:0; width:100%; height:100%;
@@ -109,13 +102,20 @@
   }
   .rodape-track{
     display:inline-flex; white-space:nowrap; will-change:transform;
+    animation:rolar 28s linear infinite;
   }
   .rodape-track span{
     font-family:"Oswald",system-ui,sans-serif; font-weight:500;
     font-size:clamp(1rem, 3.4vmin, 2.2rem); letter-spacing:0.04em;
     padding:0 3vw; text-transform:uppercase;
   }
-
+  @keyframes rolar{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .rodape-track{ animation:none; }
+  }
 
   .debug{
     display:none; position:fixed; bottom:1rem; left:50%; transform:translateX(-50%);
@@ -162,33 +162,17 @@
   <div class="debug" id="debug"></div>
 
   <audio id="ding" src="ding.mp3" preload="auto"></audio>
-  <audio id="fila" src="fila.mp3" preload="auto"></audio>
 
 <script>
   /* ============================================================
      MEDIA A RODAR NO LADO ESQUERDO
 
-     A forma normal de escolher o que aparece é editar o ficheiro
-     "lista.txt" (um nome de ficheiro por linha). Vê o lista.txt.
-
-     A lista abaixo é só uma RESERVA, usada se o lista.txt faltar.
+     VERSÃO LEVE — para internet fraca.
+     Não há lista de fotos/vídeos: mostra só o logótipo, que já vem
+     embebido no próprio ficheiro (não faz pedidos à rede).
      ============================================================ */
-  let MEDIA = [
-    "saloio1.jpg",
-    "ciclo.mp4",
-    "forno.jpg",
-    "diamae1.jpg",
-    "lenha.png",
-    "armonio.png",
-    "avolurdes.png",
-    "diamae2.jpg",
-    "coracao.jpg",
-    "logo.png",
-    "massamae.png",
-    "mae.png",
-    "vbroa.mp4",
-  ];
-  const SEGUNDOS_IMAGEM = 8;   // tempo de cada imagem no ecrã
+  let MEDIA = [];
+  const SEGUNDOS_IMAGEM = 8;   // (sem uso nesta versão)
   /* ============================================================ */
 
   const palco = document.getElementById("palco");
@@ -314,27 +298,38 @@
   function mostrar(){ elNumero.textContent = String(senha).padStart(2, "0"); }
   function avivar(){ elNumero.classList.remove("flare"); void elNumero.offsetWidth; elNumero.classList.add("flare"); }
 
-  /* ---- Áudio: ding.mp3 + fila.mp3 ---- */
-  const filaAudio = document.getElementById("fila");
+  /* ---- Voz (TTS) a dizer "Senha X" ---- */
+  let VOZES = [];
+  function carregarVozes(){ try{ VOZES = window.speechSynthesis.getVoices() || []; }catch(e){} }
+  if("speechSynthesis" in window){
+    carregarVozes();
+    try{ window.speechSynthesis.onvoiceschanged = carregarVozes; }catch(e){}
+  }
+  function falarSenha(n){
+    try{
+      if(!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance("Senha " + n);
+      u.lang = "pt-PT"; u.rate = 0.95; u.pitch = 1; u.volume = 1;
+      const vp = VOZES.find(v => /pt[-_]?PT/i.test(v.lang)) || VOZES.find(v => /^pt/i.test(v.lang));
+      if(vp) u.voice = vp;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  /* Toca o ding e, quando termina, diz "Senha X" (com reserva por tempo) */
   function anunciar(n){
+    let falou = false;
+    const dizer = () => { if(falou) return; falou = true; falarSenha(n); };
     if(ding){
       try{
         ding.currentTime = 0;
+        ding.addEventListener("ended", dizer, { once:true });
         const p = ding.play();
-        /* Depois do ding terminar, toca "freguês que se segue" */
-        ding.addEventListener("ended", function tocarFila(){
-          ding.removeEventListener("ended", tocarFila);
-          if(filaAudio){
-            try{
-              filaAudio.currentTime = 0;
-              const pf = filaAudio.play();
-              if(pf && pf.catch) pf.catch(()=>{});
-            }catch(e){}
-          }
-        }, { once: true });
         if(p && p.catch) p.catch(()=>{});
       }catch(e){}
     }
+    setTimeout(dizer, 1200); // se o ding não tocar/terminar, fala na mesma
   }
 
   function avancar(){
@@ -346,24 +341,12 @@
   function reiniciar(){ senha = 0; mostrar(); avivar(); }
 
   function ehOK(e){ return e.key==="Enter"||e.key==="Select"||e.keyCode===13||e.keyCode===23; }
-  function ehAvancar(e){
-    return ehOK(e)
-      || e.key===" "||e.key==="Spacebar"
-      || e.key==="PageDown"
-      || e.key==="ArrowUp"||e.key==="ArrowRight"
-      || e.key==="AudioVolumeUp"||e.key==="VolumeUp"||e.keyCode===175
-      || e.key==="F5"||e.key==="F8";
-  }
-  function ehRecuar(e){ return e.key==="ArrowLeft"||e.key==="ArrowDown"||e.key==="PageUp"; }
+  function ehAvancar(e){ return ehOK(e)||e.key===" "||e.key==="Spacebar"||e.key==="PageDown"; }
+  function ehRecuar(e){ return e.key==="ArrowLeft"||e.key==="PageUp"; }
   function ehReiniciar(e){ return e.key==="r"||e.key==="R"; }
-  function ehDebugToggle(e){ return e.key==="d"||e.key==="D"; }
 
   document.addEventListener("keydown", (e) => {
-    if(ehDebugToggle(e)){ DEBUG = !DEBUG; elDebug.style.display = DEBUG ? "block" : "none"; return; }
-    if(DEBUG){
-      elDebug.textContent = '🔑 key="'+e.key+'"   code="'+e.code+'"   keyCode='+e.keyCode
-        +'\n\nSe este é o teu botão bluetooth,\ndiz ao técnico qual é o "key" mostrado.';
-    }
+    if(DEBUG){ elDebug.textContent = 'key="'+e.key+'"   code="'+e.code+'"   keyCode='+e.keyCode; }
     if(e.repeat) return;
     if(ehAvancar(e)){ e.preventDefault(); avancar(); }
     else if(ehRecuar(e)){ e.preventDefault(); recuar(); }
@@ -427,34 +410,23 @@
      RODAPÉ — escreve aqui a mensagem que vai passar.
      Para várias frases, separa com "   •   ".
      ============================================================ */
-  const MENSAGEM_RODAPE = "Bem-vindos à Achadapão!   🥖 O verdadeiro pão saloio cozido em forno a lenha desde 1970   🍰 Aproveite para provar os nossos bolos fresquinhos   👀 Fique atento ao seu número   ❤️ Obrigado pela sua visita e volte sempre!";
+  const MENSAGEM_RODAPE = "Bem-vindos à Achadapão   •   Pão Saloio cozido em forno a lenha desde 1970   •   Obrigado pela vossa visita";
 
   function iniciarRodape(){
     const track = document.getElementById("rodapeTrack");
     if(!track) return;
     track.innerHTML = "";
-    for(let i=0;i<4;i++){
+    // duas cópias da mensagem para o ciclo ser contínuo (sem cortes)
+    for(let i=0;i<2;i++){
       const s = document.createElement("span");
       s.textContent = MENSAGEM_RODAPE;
       track.appendChild(s);
     }
-    /* Scroll JS puro — não é afetado por prefers-reduced-motion do Chromecast/Google TV */
-    let pos = 0;
-    const PX_POR_FRAME = 1.5; /* velocidade: aumentar para mais rápido */
-    function rolar(){
-      pos += PX_POR_FRAME;
-      /* Quando avançou metade da largura total, volta ao início sem salto */
-      const metade = track.scrollWidth / 2;
-      if(pos >= metade) pos = 0;
-      track.style.transform = "translateX(-" + pos + "px)";
-      requestAnimationFrame(rolar);
-    }
-    requestAnimationFrame(rolar);
   }
   iniciarRodape();
 
   mostrar();
-  carregarLista();
+  iniciarMedia();   // versão leve: sem fetch a lista.txt, arranca já com o logótipo
 </script>
 </body>
 </html>
